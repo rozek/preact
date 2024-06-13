@@ -18,7 +18,6 @@ declare namespace React {
 	export import PropRef = _hooks.PropRef;
 	export import Reducer = _hooks.Reducer;
 	export import Dispatch = _hooks.Dispatch;
-	export import Ref = _hooks.Ref;
 	export import SetStateAction = _hooks.StateUpdater;
 	export import useCallback = _hooks.useCallback;
 	export import useContext = _hooks.useContext;
@@ -50,6 +49,7 @@ declare namespace React {
 	export import ComponentClass = preact.ComponentClass;
 	export import FC = preact.FunctionComponent;
 	export import createContext = preact.createContext;
+	export import Ref = preact.Ref;
 	export import createRef = preact.createRef;
 	export import Fragment = preact.Fragment;
 	export import createElement = preact.createElement;
@@ -87,18 +87,18 @@ declare namespace React {
 	export import ChangeEventHandler = JSXInternal.GenericEventHandler;
 
 	export function createPortal(
-		vnode: preact.VNode,
+		vnode: preact.ComponentChildren,
 		container: preact.ContainerNode
 	): preact.VNode<any>;
 
 	export function render(
-		vnode: preact.VNode<any>,
+		vnode: preact.ComponentChild,
 		parent: preact.ContainerNode,
 		callback?: () => void
 	): Component | null;
 
 	export function hydrate(
-		vnode: preact.VNode<any>,
+		vnode: preact.ComponentChild,
 		parent: preact.ContainerNode,
 		callback?: () => void
 	): Component | null;
@@ -115,14 +115,16 @@ declare namespace React {
 	) => preact.VNode<any>;
 	export function isValidElement(element: any): boolean;
 	export function isFragment(element: any): boolean;
+	export function isMemo(element: any): boolean;
 	export function findDOMNode(
 		component: preact.Component | Element
 	): Element | null;
 
-	export abstract class PureComponent<P = {}, S = {}, SS = any> extends preact.Component<
-		P,
-		S
-	> {
+	export abstract class PureComponent<
+		P = {},
+		S = {},
+		SS = any
+	> extends preact.Component<P, S> {
 		isPureReactComponent: boolean;
 	}
 
@@ -174,9 +176,11 @@ declare namespace React {
 
 	export type ComponentPropsWithRef<
 		C extends ComponentType<any> | keyof JSXInternal.IntrinsicElements
-	> = C extends (new(props: infer P) => Component<any, any>)
-	? PropsWithoutRef<P> & RefAttributes<InstanceType<C>>
-	: ComponentProps<C>;
+	> = C extends new (
+		props: infer P
+	) => Component<any, any>
+		? PropsWithoutRef<P> & RefAttributes<InstanceType<C>>
+		: ComponentProps<C>;
 
 	export function flushSync<R>(fn: () => R): R;
 	export function flushSync<A, R>(fn: (a: A) => R, a: A): R;
