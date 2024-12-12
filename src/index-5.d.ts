@@ -87,7 +87,7 @@ export type ComponentProps<
 		: never;
 
 export interface FunctionComponent<P = {}> {
-	(props: RenderableProps<P>, context?: any): ComponentChildren;
+	(props: RenderableProps<P>, context?: any): VNode | null;
 	displayName?: string;
 	defaultProps?: Partial<P> | undefined;
 }
@@ -180,7 +180,7 @@ export abstract class Component<P, S> {
 		props?: RenderableProps<P>,
 		state?: Readonly<S>,
 		context?: any
-	): ComponentChildren;
+	): ComponentChild;
 }
 
 //
@@ -210,7 +210,7 @@ export function createElement<
 	P extends JSXInternal.SVGAttributes<T>,
 	T extends HTMLElement
 >(
-	type: keyof JSXInternal.IntrinsicSVGElements,
+	type: keyof JSXInternal.IntrinsicElements,
 	props: (ClassAttributes<T> & P) | null,
 	...children: ComponentChildren[]
 ): VNode<ClassAttributes<T> & P>;
@@ -257,7 +257,7 @@ export function h<
 	P extends JSXInternal.SVGAttributes<T>,
 	T extends HTMLElement
 >(
-	type: keyof JSXInternal.IntrinsicSVGElements,
+	type: keyof JSXInternal.IntrinsicElements,
 	props: (ClassAttributes<T> & P) | null,
 	...children: ComponentChildren[]
 ): VNode<ClassAttributes<T> & P>;

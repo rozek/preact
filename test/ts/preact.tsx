@@ -6,7 +6,8 @@ import {
 	FunctionalComponent,
 	AnyComponent,
 	h,
-	createRef
+	createRef,
+	JSX
 } from '../../';
 
 interface DummyProps {
@@ -97,6 +98,7 @@ function createRootFragment(parent: Element, replaceNode: Element | Element[]) {
 		parentNode: parent,
 		firstChild: replaceNodes[0],
 		childNodes: replaceNodes,
+		contains: (c: Node) => parent.contains(c),
 		insertBefore: insert,
 		appendChild: (c: Node) => insert(c, null),
 		removeChild: function (c: Node) {
@@ -137,22 +139,21 @@ const UseOfComponentWithChildren = () => {
 	);
 };
 
-// TODO: make this work
-// const DummyChildren: FunctionalComponent = ({ children }) => {
-// 	return children;
-// };
+const DummyChildren: FunctionalComponent = ({ children }) => {
+	return children;
+};
 
-// function ReturnChildren(props: { children: preact.ComponentChildren }) {
-// 	return props.children;
-// }
+function ReturnChildren(props: { children: preact.ComponentChildren }) {
+	return props.children;
+}
 
-// function TestUndefinedChildren() {
-// 	return (
-// 		<ReturnChildren>
-// 			<ReturnChildren>Hello</ReturnChildren>
-// 		</ReturnChildren>
-// 	);
-// }
+function TestUndefinedChildren() {
+	return (
+		<ReturnChildren>
+			<ReturnChildren>Hello</ReturnChildren>
+		</ReturnChildren>
+	);
+}
 
 // using ref and or jsx
 class ComponentUsingRef extends Component<any, any> {
@@ -378,3 +379,17 @@ const onSubmit = (e: h.JSX.TargetedSubmitEvent<HTMLFormElement>) => {};
 <form onSubmit={e => e.currentTarget.elements} />;
 createElement('form', { onSubmit: onSubmit });
 h('form', { onSubmit: onSubmit });
+
+h('option', { value: 'foo' });
+createElement('option', { value: 'foo' });
+
+function Checkbox({ onChange }: JSX.HTMLAttributes<HTMLInputElement>) {
+	function handleChange(
+		this: void,
+		event: JSX.TargetedEvent<HTMLInputElement>
+	) {
+		onChange?.call(this, event);
+	}
+
+	return <input onChange={handleChange} />;
+}
