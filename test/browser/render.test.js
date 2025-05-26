@@ -43,14 +43,14 @@ describe('render()', () => {
 		teardown(scratch);
 	});
 
-	before(() => {
+	beforeAll(() => {
 		resetAppendChild = logCall(Element.prototype, 'appendChild');
 		resetInsertBefore = logCall(Element.prototype, 'insertBefore');
 		resetRemoveChild = logCall(Element.prototype, 'removeChild');
 		resetRemove = logCall(Element.prototype, 'remove');
 	});
 
-	after(() => {
+	afterAll(() => {
 		resetAppendChild();
 		resetInsertBefore();
 		resetRemoveChild();
@@ -91,6 +91,20 @@ describe('render()', () => {
 			expect(scratch.innerHTML).to.eql(`<img width="100px" height="100px">`);
 		});
 	}
+
+	it('should support the <template> tag', () => {
+		function App() {
+			return (
+				<template>
+					<h1>it works</h1>
+				</template>
+			);
+		}
+
+		render(<App />, scratch);
+		const clone = scratch.firstChild.content.cloneNode(true);
+		expect(clone.firstChild.outerHTML).to.eql('<h1>it works</h1>');
+	});
 
 	it('should not render when detecting JSON-injection', () => {
 		const vnode = JSON.parse('{"type":"span","children":"Malicious"}');
@@ -1949,8 +1963,68 @@ describe('render()', () => {
 			</Fragment>
 		);
 		render(<App />, document);
-		expect(document.documentElement.innerHTML).to.equal(
-			'<head><title>Test</title></head><body><p>Test</p></body>\n'
+		expect(document.documentElement.innerHTML.trim()).to.equal(
+			'<head><title>Test</title></head><body><p>Test</p></body>'
 		);
+	});
+
+	it('should not remount components when replacing a component with a falsy value in-between', () => {
+		const actions = [];
+		class Comp extends Component {
+			componentDidMount() {
+				actions.push('mounted ' + this.props.i);
+			}
+			render() {
+				return <div>Hello</div>;
+			}
+		}
+
+		const App = props => {
+			return (
+				<div>
+					{props.y === '1' ? <Comp i={1} /> : <div />}
+					{false}
+					<Comp i={2} />
+					<Comp i={3} />
+				</div>
+			);
+		};
+
+		render(<App y="1" />, scratch);
+		expect(actions).to.deep.equal(['mounted 1', 'mounted 2', 'mounted 3']);
+
+		render(<App y="2" />, scratch);
+		expect(actions).to.deep.equal(['mounted 1', 'mounted 2', 'mounted 3']);
+	});
+
+	it('Should render intercepted component', () => {
+		class Test {
+			constructor(text) {
+				this.text = text;
+			}
+		}
+
+		const TestValue = props => {
+			return props.text;
+		};
+
+		Object.defineProperties(Test.prototype, {
+			constructor: { configurable: true, value: undefined },
+			type: { configurable: true, value: TestValue },
+			props: {
+				configurable: true,
+				get() {
+					return { text: this.text };
+				}
+			},
+			_depth: { configurable: true, value: 1 }
+		});
+
+		const test = new Test('hello world');
+
+		const App = () => <Fragment>{test}</Fragment>;
+
+		render(<App />, scratch);
+		expect(scratch.innerHTML).to.equal('hello world');
 	});
 });

@@ -5,7 +5,6 @@ on:
   # workflow_run workflow as a workaround
   workflow_run:
     workflows: ['CI']
-    branches: ['**']
     types:
       - completed
       - requested
@@ -23,10 +22,17 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
+          # As this Workflow is triggered by a `workflow_run` event, the filter action
+          # can't automatically assume we're working with PR data. As such, we need to
+          # wire it up manually with a base (merge target) and ref (source branch).
+          base: ${{ github.event.workflow_run.pull_requests[0].base.sha }}
+          ref: ${{ github.event.workflow_run.pull_requests[0].head.sha }}
           # Should be kept in sync with the filter in the CI workflow
+          predicate-quantifier: 'every'
           filters: |
-            jsChanged: '**/src/**/*.js'
+            jsChanged:
+              - '**/src/**/*.js'
+              - '!devtools/src/devtools.js'
 
   report_running:
     name: Report benchmarks are in-progress

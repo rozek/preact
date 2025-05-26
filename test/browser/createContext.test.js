@@ -7,6 +7,7 @@ import {
 	Fragment
 } from 'preact';
 import { setupScratch, teardown } from '../_util/helpers';
+import { vi } from 'vitest';
 
 /** @jsx createElement */
 
@@ -57,6 +58,40 @@ describe('createContext', () => {
 		expect(scratch.innerHTML).to.equal('<div><div>a</div></div>');
 	});
 
+	it('should pass context to a consumer (non-provider)', () => {
+		const Ctx = createContext(null);
+		const CONTEXT = { a: 'a' };
+
+		let receivedContext;
+
+		class Inner extends Component {
+			render(props) {
+				return <div>{props.a}</div>;
+			}
+		}
+
+		sinon.spy(Inner.prototype, 'render');
+
+		render(
+			<Ctx value={CONTEXT}>
+				<div>
+					<Ctx.Consumer>
+						{data => {
+							receivedContext = data;
+							return <Inner {...data} />;
+						}}
+					</Ctx.Consumer>
+				</div>
+			</Ctx>,
+			scratch
+		);
+
+		// initial render does not invoke anything but render():
+		expect(Inner.prototype.render).to.have.been.calledWithMatch(CONTEXT);
+		expect(receivedContext).to.equal(CONTEXT);
+		expect(scratch.innerHTML).to.equal('<div><div>a</div></div>');
+	});
+
 	// This optimization helps
 	// to prevent a Provider from rerendering the children, this means
 	// we only propagate to children.
@@ -94,7 +129,7 @@ describe('createContext', () => {
 		expect(renders).to.equal(1);
 	});
 
-	it('should preserve provider context through nesting providers', done => {
+	it('should preserve provider context through nesting providers', async () => {
 		const { Provider, Consumer } = createContext(null);
 		const CONTEXT = { a: 'a' };
 		const CHILD_CONTEXT = { b: 'b' };
@@ -143,16 +178,19 @@ describe('createContext', () => {
 		expect(parentContext).to.equal(CONTEXT);
 		expect(childContext).to.equal(CHILD_CONTEXT);
 		expect(scratch.innerHTML).to.equal('<div>a - b</div>');
-		setTimeout(() => {
-			expect(Inner.prototype.render).to.be.calledOnce;
-			done();
-		}, 0);
+		return new Promise(resolve => {
+			setTimeout(() => {
+				expect(Inner.prototype.render).to.be.calledOnce;
+				resolve();
+			}, 0);
+		});
 	});
 
 	it('should preserve provider context between different providers', () => {
 		const { Provider: ThemeProvider, Consumer: ThemeConsumer } =
 			createContext(null);
-		const { Provider: DataProvider, Consumer: DataConsumer } = createContext(null);
+		const { Provider: DataProvider, Consumer: DataConsumer } =
+			createContext(null);
 		const THEME_CONTEXT = { theme: 'black' };
 		const DATA_CONTEXT = { global: 'a' };
 
@@ -358,7 +396,7 @@ describe('createContext', () => {
 		);
 	});
 
-	it('should propagates through shouldComponentUpdate false', done => {
+	it('should propagates through shouldComponentUpdate false', async () => {
 		const { Provider, Consumer } = createContext(null);
 		const CONTEXT = { a: 'a' };
 		const UPDATED_CONTEXT = { a: 'b' };
@@ -431,9 +469,11 @@ describe('createContext', () => {
 		expect(scratch.innerHTML).to.equal(
 			'<div><div><strong>b</strong></div></div>'
 		);
-		setTimeout(() => {
-			expect(Consumed.prototype.render).to.have.been.calledTwice;
-			done();
+		return new Promise(resolve => {
+			setTimeout(() => {
+				expect(Consumed.prototype.render).to.have.been.calledTwice;
+				resolve();
+			});
 		});
 	});
 
@@ -645,7 +685,7 @@ describe('createContext', () => {
 	it('should not rerender consumers that have been unmounted', () => {
 		const { Provider, Consumer } = createContext(0);
 
-		const Inner = sinon.spy(props => <div>{props.value}</div>);
+		const Inner = vi.fn(props => <div>{props.value}</div>);
 
 		let toggleConsumer;
 		let changeValue;
@@ -672,22 +712,22 @@ describe('createContext', () => {
 
 		render(<App />, scratch);
 		expect(scratch.innerHTML).to.equal('<div><div>0</div></div>');
-		expect(Inner).to.have.been.calledOnce;
+		expect(Inner).toHaveBeenCalledOnce();
 
 		changeValue(1);
 		rerender();
 		expect(scratch.innerHTML).to.equal('<div><div>1</div></div>');
-		expect(Inner).to.have.been.calledTwice;
+		expect(Inner).toHaveBeenCalledTimes(2);
 
 		toggleConsumer();
 		rerender();
 		expect(scratch.innerHTML).to.equal('<div></div>');
-		expect(Inner).to.have.been.calledTwice;
+		expect(Inner).toHaveBeenCalledTimes(2);
 
 		changeValue(2);
 		rerender();
 		expect(scratch.innerHTML).to.equal('<div></div>');
-		expect(Inner).to.have.been.calledTwice;
+		expect(Inner).toHaveBeenCalledTimes(2);
 	});
 
 	describe('class.contextType', () => {
@@ -969,5 +1009,37 @@ describe('createContext', () => {
 		rerender();
 		expect(scratch.textContent).to.equal('bar');
 		expect(spy).not.to.be.called;
+	});
+
+	it('should pass context through strict equal children', () => {
+		const context = { foo: 'bar' };
+		const Ctx = createContext(null)
+
+		/** @type {(s: { foo: string }) => void} */
+		let set;
+		class Wrapper extends Component {
+			constructor(props) {
+				super(props);
+				this.state = context;
+				set = this.setState.bind(this)
+			}
+
+			getChildContext() {
+				return context;
+			}
+
+			render() {
+				return (
+					<Ctx.Provider value={this.state}>{this.props.children}</Ctx.Provider>
+				);
+			}
+		}
+
+		render(<Wrapper><Ctx.Consumer>{value => <p>{value.foo}</p>}</Ctx.Consumer></Wrapper>, scratch);
+		expect(scratch.innerHTML).to.equal('<p>bar</p>');
+
+		set({ foo: 'baz' })
+		rerender();
+		expect(scratch.innerHTML).to.equal('<p>baz</p>');
 	});
 });
