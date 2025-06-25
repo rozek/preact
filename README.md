@@ -1,3 +1,6 @@
+> [!NOTE]
+> Nota bene: this is a fork of the [preact v10.x branch](https://github.com/preactjs/preact/tree/v10.x) which makes the /dist folder publically available in order to load it from (GDPR-compliant!) GitHub pages rather than from other CDNs with unclear compliance
+
 <p align="center">
 <a href="https://preactjs.com" target="_blank">
 
